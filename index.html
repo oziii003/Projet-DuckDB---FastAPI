@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="Ozias KOUADIO">
+    <title>Duck DB</title>
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Interrogation DuckDB</h1>
+
+    <form id="queryForm">
+        <input type="text" id="sql" placeholder="Entrer une requête SQL" required>
+        <input type="number" id="limit" placeholder="Limite de lignes (optionnelle)">
+        <button type="submit">Exécuter</button>
+    </form>
+
+    <div>
+        <table id="resultTable">
+            <thead></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        document.getElementById("queryForm").addEventListener("submit", async function(e) {
+            e.preventDefault();
+
+            const sql = document.getElementById("sql").value;
+            const limit = document.getElementById("limit").value;
+
+            const payload = {
+                sql: sql,
+                limit: limit ? parseInt(limit) : undefined
+            };
+
+            const response = await fetch("http://localhost:8000/query/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const tableHead = document.querySelector("#resultTable thead");
+            const tableBody = document.querySelector("#resultTable tbody");
+            tableHead.innerHTML = "";
+            tableBody.innerHTML = "";
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.length > 0) {
+                    // En-têtes
+                    const headers = Object.keys(data[0]);
+                    const headRow = document.createElement("tr");
+                    headers.forEach(h => {
+                        const th = document.createElement("th");
+                        th.textContent = h;
+                        headRow.appendChild(th);
+                    });
+                    tableHead.appendChild(headRow);
+
+                    // Lignes
+                    data.forEach(row => {
+                        const tr = document.createElement("tr");
+                        headers.forEach(h => {
+                            const td = document.createElement("td");
+                            td.textContent = row[h];
+                            tr.appendChild(td);
+                        });
+                        tableBody.appendChild(tr);
+                    });
+                } else {
+                    tableBody.innerHTML = "<tr><td colspan='100%'>Aucun résultat</td></tr>";
+                }
+            } else {
+                const error = await response.json();
+                tableBody.innerHTML = `<tr><td colspan='100%'>Erreur : ${error.detail}</td></tr>`;
+            }
+        });
+    </script>
+</body>
+</html>
